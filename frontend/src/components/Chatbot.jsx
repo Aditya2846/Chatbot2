@@ -226,24 +226,29 @@ export default function Chatbot() {
 
         {/* Input */}
         <div className="p-4 bg-white border-t border-gray-100">
-          <div className="flex gap-2">
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+          >
             <input
               className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ask about art or type 'book'..."
             />
             <button
+              type="submit"
               className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg hover:shadow-blue-600/30 transition-all disabled:opacity-50"
-              onClick={handleSend}
               disabled={!input.trim() || isTyping}
             >
               <svg className="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
               </svg>
             </button>
-          </div>
+          </form>
         </div>
       </div>
 

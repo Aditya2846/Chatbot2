@@ -6,7 +6,7 @@ const ticketSchema = new mongoose.Schema({
   email: { type: String },
   ticketType: { type: String, required: true, default: "General Admission" },
   exhibition: { type: String, default: "Main Collection" },
-  date: { type: String, required: true }, // YYYY-MM-DD
+  date: { type: String, required: true }, 
   visitors: { type: Number, default: 1 },
   category: { type: String, default: "Adult" },
   price: { type: Number, default: 0 },

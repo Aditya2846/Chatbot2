@@ -18,7 +18,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.post("/api/chat", chatWithAI);
 
-// Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -30,82 +29,53 @@ app.get("/api/health", (req, res) => {
 const PORT = process.env.PORT || 5000;
 const MONGO = process.env.MONGO_URI || "mongodb://localhost:27017/museum-bot";
 
-// MongoDB connection with retry logic
-const connectWithRetry = async (retries = 5, delay = 5000) => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      await mongoose.connect(MONGO, {
-        serverSelectionTimeoutMS: 10000,
-        socketTimeoutMS: 45000,
-      });
-      console.log("✅ MongoDB connected successfully");
-      console.log(`📦 Database: ${mongoose.connection.name || 'default'}`);
-      console.log(`🔗 Connection state: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
-      return true;
-    } catch (err) {
-      console.error(`❌ MongoDB connection attempt ${i + 1}/${retries} failed:`, err.message);
+// MongoDB Connection for Serverless (prevents multiple connections)
+let isConnected = false;
 
-      if (err.message.includes("IP") || err.message.includes("whitelist")) {
-        console.error("\n⚠️  IP WHITELIST ERROR DETECTED!");
-        console.error("📋 Action required:");
-        console.error("   1. Go to https://cloud.mongodb.com/");
-        console.error("   2. Navigate to Network Access → IP Whitelist");
-        console.error("   3. Add your current IP or allow access from anywhere (0.0.0.0/0)");
-        console.error("   4. Wait 1-2 minutes and restart the server\n");
-      }
-
-      if (i < retries - 1) {
-        const waitTime = delay * Math.pow(2, i); // Exponential backoff
-        console.log(`⏳ Retrying in ${waitTime / 1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-    }
+const connectToDatabase = async () => {
+  if (isConnected) {
+    console.log('=> using existing database connection');
+    return;
   }
-  return false;
+
+  try {
+    const db = await mongoose.connect(MONGO, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    });
+    isConnected = db.connections[0].readyState;
+    console.log("✅ MongoDB connected successfully");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error.message);
+    throw error; // Rethrow to let Vercel know function failed
+  }
 };
 
-// Middleware to check DB connection before processing requests
-const checkDbConnection = (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({
-      message: "Database connection unavailable. Please try again later.",
-      error: "SERVICE_UNAVAILABLE",
-      details: "The server cannot connect to the database. Please contact support if this persists."
+// Middleware to ensure DB connection
+const checkDbConnection = async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (error) {
+    res.status(503).json({
+      message: "Database connection failed",
+      error: "SERVICE_UNAVAILABLE"
     });
   }
-  next();
 };
 
-// Apply DB check middleware to critical routes
 app.use("/api/tickets", checkDbConnection);
 app.use("/api/auth", checkDbConnection);
+app.use("/api/admin", checkDbConnection);
+// Note: /api/chat might not need DB directly if it's just AI, but good practice if it logs chats
 
-// Start server with MongoDB connection
-connectWithRetry().then((connected) => {
-  if (connected) {
+// Local development server
+if (process.env.NODE_ENV !== 'production') {
+  connectToDatabase().then(() => {
     app.listen(PORT, () => {
-      console.log(`✅ Server running on http://localhost:${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`✅ Server running locally on http://localhost:${PORT}`);
     });
-  } else {
-    console.error("❌ Failed to connect to MongoDB after multiple retries");
-    console.error("⚠️  Server will start but database operations will fail");
-    console.error("🔧 Please fix the MongoDB connection and restart the server");
+  });
+}
 
-    // Start server anyway but warn about DB issues
-    app.listen(PORT, () => {
-      console.log(`⚠️  Server running on http://localhost:${PORT} (DB DISCONNECTED)`);
-      console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-    });
-  }
-});
-
-// Handle MongoDB connection errors after initial connection
-mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB connection error:', err.message);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
-  connectWithRetry(3, 3000);
-});
+export default app;

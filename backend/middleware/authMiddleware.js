@@ -3,7 +3,6 @@ import User from "../models/User.js";
 
 export const authMiddleware = async (req, res, next) => {
     try {
-        // Get token from header
         const token = req.header("Authorization")?.replace("Bearer ", "");
 
         if (!token) {
@@ -13,10 +12,8 @@ export const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
 
-        // Get user from database
         const user = await User.findById(decoded.user.id).select("-password");
 
         if (!user) {
@@ -26,7 +23,6 @@ export const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // Attach user to request
         req.user = user;
         next();
     } catch (err) {
@@ -53,7 +49,6 @@ export const optionalAuth = async (req, res, next) => {
 
         next();
     } catch (err) {
-        // If token is invalid, just continue without user
         next();
     }
 };

@@ -3,10 +3,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // or your preferred service
+  service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER, // e.g., 'your-email@gmail.com'
-    pass: process.env.EMAIL_PASS  // e.g., 'your-app-password'
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -89,8 +89,14 @@ export const sendTicketEmail = async (to, ticketDetails) => {
             </div>
             
             <p style="text-align: center; color: #666;">
-              Need to make changes? Visit your tickets page or contact support.
+              Need to make changes? Visit your tickets page to cancel or view details.
             </p>
+            
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/tickets" style="background-color: #f5576c; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
+                Manage Booking / Cancel Ticket
+              </a>
+            </div>
           </div>
           
           <div class="footer">

@@ -83,7 +83,19 @@ export const getDashboardStats = async (req, res) => {
             },
             ticketsByStatus,
             recentTickets,
-            topExhibitions
+            topExhibitions,
+            revenueData: await Ticket.aggregate([ // Add revenue over time
+                { $match: { paymentStatus: "Paid" } },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                        dailyRevenue: { $sum: "$price" },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } },
+                { $limit: 7 } // Last 7 days with data
+            ])
         });
     } catch (err) {
         console.error("Error fetching dashboard stats:", err);
